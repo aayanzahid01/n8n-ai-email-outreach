@@ -1,0 +1,207 @@
+{
+  "name": "AI Email Outreach — Google Sheets to Gmail via Groq",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 9
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        192
+      ],
+      "id": "14228b9f-fdd4-41d5-a55c-29482eb1343d",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "https://docs.google.com/spreadsheets/d/1ZRy1TL2OfAjGUBbkaTVUB_QhuS0qZ1L-XGJNBLYgUjE/edit?usp=sharing",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1ZRy1TL2OfAjGUBbkaTVUB_QhuS0qZ1L-XGJNBLYgUjE/edit#gid=0"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        224,
+        192
+      ],
+      "id": "690410c8-8834-4f7a-9f58-dbb88278416d",
+      "name": "Get row(s) in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "LV37gQ9MXb6wa3Ue",
+          "name": "Google Sheets OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        448,
+        192
+      ],
+      "id": "bca3fff3-b608-442c-8afd-9999290241d8",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "name": "Replace Me",
+      "typeVersion": 1,
+      "position": [
+        672,
+        192
+      ],
+      "id": "68ce30fb-4bc7-4288-9758-3f1963435091",
+      "placeholder": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"llama-3.3-70b-versatile\",\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"Write a short friendly WhatsApp message for a business. Customer name: Aayan. Topic: new product launch. Maximum 3 sentences. No emojis. End with a call to action.\"\n    }\n  ],\n  \"max_tokens\": 200\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        672,
+        0
+      ],
+      "id": "4df5ebc3-a149-4a11-9ec5-648a8c84a695",
+      "name": "Groq Integration",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "eJl5kddtx2L2IAv0",
+          "name": "Header Auth account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Get row(s) in sheet').item.json.Email }}",
+        "subject": "=Hi {{ $('Get row(s) in sheet').item.json.Name }}, a message for you",
+        "message": "={{ $('Groq Integration').item.json.choices[0].message.content.replace(/\\n/g, '<br>') }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        928,
+        80
+      ],
+      "id": "eedda1ff-de3f-421a-9399-e61a83ccd12e",
+      "name": "Send a message",
+      "webhookId": "9ed0e617-da51-47aa-82e9-0d6d09abca97",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "YPUCyeTkDldROi2u",
+          "name": "Gmail OAuth2 API"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [
+          {
+            "node": "Replace Me",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Groq Integration",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Replace Me": {
+      "main": [
+        []
+      ]
+    },
+    "Groq Integration": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "f565ed08-b3f3-4d95-a933-b6053881b949",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "f2e3d15ad638c1485bd16d6320c3ec615ffe46394ace53631ca19bedaf31e4dd"
+  },
+  "id": "dkSLJ71ZkS9tsbha",
+  "tags": []
+}
